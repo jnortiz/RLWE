@@ -139,7 +139,7 @@ all: RLWE.out
 RLWE.out: $(OBJS) $(CMD_SRCS) $(LDS_SRCS) $(GEN_CMDS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MSP432 Linker'
-	"/home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me -O3 --opt_for_speed=1 --advice:power=all -g --gcc --define=__MSP432P401R__ --define=TARGET_IS_MSP432P4XX --define=ccs --diag_wrap=off --display_error_number --diag_warning=225 --abi=eabi -z -m"RLWE.map" --heap_size=1024 --stack_size=512 -i"/home/jnortiz/ti_0/ccsv6/ccs_base/arm/include" -i"/home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/lib" -i"/home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include" --reread_libs --warn_sections --display_error_number --diag_wrap=off --xml_link_info="RLWE_linkInfo.xml" --rom_model -o "RLWE.out" $(ORDERED_OBJS)
+	"/home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 -me --opt_for_speed=1 --advice:power=all -g --gcc --define=__MSP432P401R__ --define=TARGET_IS_MSP432P4XX --define=ccs --diag_wrap=off --display_error_number --diag_warning=225 --abi=eabi -z -m"RLWE.map" --heap_size=1024 --stack_size=512 -i"/home/jnortiz/ti_0/ccsv6/ccs_base/arm/include" -i"/home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/lib" -i"/home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include" --reread_libs --warn_sections --display_error_number --diag_wrap=off --xml_link_info="RLWE_linkInfo.xml" --rom_model -o "RLWE.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

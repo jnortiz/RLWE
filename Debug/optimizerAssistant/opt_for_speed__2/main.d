@@ -50,6 +50,7 @@ main.obj: /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include
 main.obj: /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/inttypes.h
 main.obj: /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/_fmt_specifier.h
 main.obj: /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/time.h
+main.obj: /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/assert.h
 
 ../main.c: 
 /home/jnortiz/ti_0/ccsv6/ccs_base/arm/include/msp.h: 
@@ -101,3 +102,4 @@ main.obj: /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include
 /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/inttypes.h: 
 /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/_fmt_specifier.h: 
 /home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/time.h: 
+/home/jnortiz/ti_0/ccsv6/tools/compiler/ti-cgt-arm_15.12.1.LTS/include/assert.h: 

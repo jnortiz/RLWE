@@ -13,15 +13,18 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <time.h>
+#include <assert.h>
 
+#define BENCH_LOOPS 100
 #define ROWS 128
 #define COLS 40
 #define N 512
 #define N_inv 12265
 #define p 12289 // Modulo p = k times N + 1 and p is prime. This is a special case addressed in [Longa and Naehrig, 2016]
 
-const uint32_t _p32_t[ROWS] = {0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 5, 14, 6, 28, 48, 11, 91, 21, 151, 29, 115, 261, 356, 1022, 0, 1979, 649,
-662, 2533, 394, 3885, 4422, 6621, 3717, 10085, 14247, 2087, 32191, 31092, 5293, 64733, 6382, 39056, 115692, 51969, 5856, 94298,
+const uint32_t _p32_t[ROWS] =
+{0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 5, 14, 6, 28, 48, 11, 91, 21, 151, 29, 115, 261, 356, 1022, 0, 1979,
+649, 662, 2533, 394, 3885, 4422, 6621, 3717, 10085, 14247, 2087, 32191, 31092, 5293, 64733, 6382, 39056, 115692, 51969, 5856, 94298,
 171399, 177506, 92944, 508031, 82593, 227864, 25774, 1030068, 7848, 1028490, 420956, 1371527, 764718, 1483754, 1713010, 3014121,
 52865, 3832607, 959009, 6586417, 2413379, 1330906, 8187911, 6557106, 9169590, 10590036, 14973908, 14290999, 19921632, 11609504,
 18523933, 25695147, 9724218, 47622715, 60536693, 42918720, 16785990, 105485922, 6837708, 50755763, 43186108, 94426434, 226108042,
@@ -30,10 +33,11 @@ const uint32_t _p32_t[ROWS] = {0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 5, 14, 6, 28, 48, 1
 2620837769u, 2169546439u, 1709320247, 3824357929u, 4067003105u, 2706660263u, 724038919, 2747761453u, 2899911731u, 2781772224u,
 2289919236u, 2637396209u, 3220823603u, 540201915, 3813240143u};
 
-const uint8_t _p8_t[ROWS] = {0, 0, 0, 15, 54, 90, 150, 96, 152, 230, 226, 90, 4, 82, 222, 246, 14, 64, 162, 196, 47, 149, 166, 58, 7,
-232, 174, 161, 204, 62, 4, 2, 139, 138, 90, 123, 195, 227, 11, 86, 88, 118, 8, 60, 224, 18, 245, 103, 194, 158, 239, 182, 126,
-63, 83, 207, 61, 2, 253, 162, 5, 125, 9, 113, 252, 95, 136, 54, 159, 35, 171, 33, 128, 130, 11, 190, 117, 98, 186, 86, 178, 19, 64,
-237, 192, 250, 223, 28, 125, 71, 21, 199, 187, 163, 6, 98, 155, 140, 244, 204, 77, 60, 200, 147, 1, 185, 34, 110, 181, 39, 175,
+const uint8_t _p8_t[ROWS] =
+{0, 0, 0, 15, 54, 90, 150, 96, 152, 230, 226, 90, 4, 82, 222, 246, 14, 64, 162, 196, 47, 149, 166, 58,
+7, 232, 174, 161, 204, 62, 4, 2, 139, 138, 90, 123, 195, 227, 11, 86, 88, 118, 8, 60, 224, 18, 245, 103, 194, 158, 239, 182, 126,
+63, 83, 207, 61, 2, 253, 162, 5, 125, 9, 113, 252, 95, 136, 54, 159, 35, 171, 33, 128, 130, 11, 190, 117, 98, 186, 86, 178, 19,
+64, 237, 192, 250, 223, 28, 125, 71, 21, 199, 187, 163, 6, 98, 155, 140, 244, 204, 77, 60, 200, 147, 1, 185, 34, 110, 181, 39, 175,
 182, 171, 116, 171, 201, 196, 125, 55, 117, 48, 197, 231, 50, 71, 0, 92, 100};
 
 const uint8_t _hw[ROWS] =
@@ -103,7 +107,7 @@ static uint32_t ct_lt_u32(uint32_t x, uint32_t y) {
 }
 
 // bit = 0 then return a
-int32_t select(int32_t a, int32_t b, unsigned bit) {
+int32_t Select(int32_t a, int32_t b, unsigned bit) {
   unsigned mask = -bit;
   return ((mask & (a ^ b)) ^ a);
 }
@@ -138,9 +142,9 @@ int32_t knuth_yao_ct_fast_32(int tailcut, int sigma, int center) {
     aux_hw = _hw[row];
     _d = 2 * _d + randomBits[row];	// Distance calculus
     enable = ct_lt_u32(_d, aux_hw); // _d < _hw[row]?
-    _d = select(_d - aux_hw, _d, enable & !hit);
-    d = select(d, _d, enable & !hit);
-    t = select(t, row, enable & !hit); // t \in {0, 127 = ROWS}
+    _d = Select(_d - aux_hw, _d, enable & !hit);
+    d = Select(d, _d, enable & !hit);
+    t = Select(t, row, enable & !hit); // t \in {0, 127 = ROWS}
     hit += (enable & !hit);
   }
 
@@ -153,7 +157,7 @@ int32_t knuth_yao_ct_fast_32(int tailcut, int sigma, int center) {
     enable = (unsigned)(d + 1); // "enable" turns 0 iff d = -1
     enable = (1 ^ ((enable | -enable) >> 31)) & 1; // "enable" turns 1 iff "enable" was 0
 
-    S += select(invalidSample, col, (enable & !hit));
+    S += Select(invalidSample, col, (enable & !hit));
     hit += (enable & !hit);
 
   }
@@ -166,7 +170,7 @@ int32_t knuth_yao_ct_fast_32(int tailcut, int sigma, int center) {
     enable = (unsigned)(d + 1); // "enable" turns 0 iff d = -1
     enable = (1 ^ ((enable | -enable) >> 31)) & 1; // "enable" turns 1 iff "enable" was 0
 
-    S += select(invalidSample, col, (enable & !hit));
+    S += Select(invalidSample, col, (enable & !hit));
     hit += (enable & !hit);
 
   }
@@ -274,53 +278,111 @@ void RandomPoly(int32_t a[]) {
 
 }
 
-void Sub(int32_t c[], int32_t a[], int32_t b[]) {
+void Add(int32_t c[], const int32_t a[], const int32_t b[]) {
 
 	uint32_t i;
 
 	for(i = 0; i < N; i++)
-		c[i] = a[i]-b[i];
+		c[i] = mod(a[i]+b[i], p);
 
 }
 
-void KeyGeneration(int32_t a[], int32_t r2[], int32_t p1[]) {
+void KeyGeneration(const int32_t a[], int32_t r2[], int32_t p1[]) {
 
-	int32_t r1;
+	int32_t r1[N];
+	uint32_t i;
 
 	PolySampling(r1);
 	PolySampling(r2);
 	NTT(r1);
 	NTT(r2);
 
-	NTT(a);
-	Mult(p1, a, r2);
-	Sub(p1, r1, p1);
+	for(i = 0; i < N; i++)
+	  p1[i] = mod(r1[i] - a[i] * r2[i], p);
 
 	// Private key: r2 | Public key: (a, p1)
 
 }//end-KeyGeneration()
 
+void Encryption(int32_t c1[], int32_t c2[], const int32_t a[], const int32_t p1[], const int32_t m[]) {
+
+  int32_t e1[N], e2[N], e3[N];
+  uint32_t i;
+
+  PolySampling(e1);
+  PolySampling(e2);
+  PolySampling(e3);
+
+  NTT(e1);
+  NTT(e2);
+
+  int32_t aux[N];
+  Add(aux, e3, m);
+  NTT(aux);
+
+  for(i = 0; i < N; i++) {
+    c1[i] = mod(a[i] * e1[i] + e2[i], p);
+    c2[i] = mod(p1[i] * e1[i] + aux[i], p);
+  }//end-for
+
+}
+
+void Decryption(int32_t m[], int32_t c1[], int32_t c2[], int32_t r2[]) {
+
+  uint32_t i;
+
+  for(i = 0; i < N; i++)
+    m[i] = mod(c1[i] * r2[i] + c2[i], p);
+  INTT(m);
+
+}
+
+void Encode(int32_t aprime[], const int32_t a[]) {
+
+  uint32_t i;
+
+  int32_t bound = (p-1)/2;
+
+  for(i = 0; i < N; i++) {
+    aprime[i] = a[i]*bound;
+  }
+
+}
+
+void Decode(int32_t a[], const int32_t aprime[]) {
+
+  uint32_t i;
+
+  int32_t lbound = (p-1)/4;
+  int32_t ubound = 3*lbound;
+
+  for(i = 0; i < N; i++) {
+    if(aprime[i] >= lbound && aprime[i] < ubound)
+      a[i] = 1;
+    else
+      a[i] = 0;
+  }
+
+}
+
 int main(void) {
 
     /* Halting WDT and disabling master interrupts */
-    MAP_WDT_A_holdTimer();
-    MAP_Interrupt_disableMaster();
+     MAP_WDT_A_holdTimer();
+     MAP_Interrupt_disableMaster();
 
-    //__delay_cycles(100000);
     srand(time(NULL));
 
-    int32_t a[N], r2[N], p1[N];
-    RandomPoly(a);
-    KeyGeneration(a, r2, p1);
+    while(1) {
 
-     while(1) {
+    	uint32_t i;
 
-        uint32_t i;
+        int32_t a[N], c1[N], c2[N], p1[N], mprime[N];
 
-        for(i = 0; i < N; i++)
-        	knuth_yao_ct_fast_32(13, 3.1915, 0);
+        for(i = 0; i < 10; i++)
+			Encryption(c1, c2, a, p1, mprime);
 
-        MAP_PCM_gotoLPM0();
+		MAP_PCM_gotoLPM0();
 
     }
 
