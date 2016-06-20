@@ -375,12 +375,26 @@ int main(void) {
 
     while(1) {
 
-    	uint32_t i;
+        int32_t a[N], r2[N], p1[N];
+        RandomPoly(a);
+        NTT(a);
+        KeyGeneration(a, r2, p1);
 
-        int32_t a[N], c1[N], c2[N], p1[N], mprime[N];
+        int32_t m[N], mprime[N], mout[N];
+        uint32_t i;
 
-        for(i = 0; i < 10; i++)
-			Encryption(c1, c2, a, p1, mprime);
+        for(i = 0; i < N; i++)
+          m[i] = rand() % 2;
+        Encode(mprime, m);
+
+        int32_t c1[N], c2[N];
+
+        Encryption(c1, c2, a, p1, mprime);
+        Decryption(mprime, c1, c2, r2);
+        Decode(mout, mprime);
+
+        for(i = 0; i < N; i++)
+          assert(mout[i] == m[i]);
 
 		MAP_PCM_gotoLPM0();
 
