@@ -16,10 +16,12 @@
 EncryptionScheme::EncryptionScheme(const int& p, const int& q) {
     this->P = p;
     this->Q = q;
-    this->f.SetLength(this->P+1); //Prime 761
+    this->f.SetLength(this->P+1);
+    
     this->f[this->P] = to_ZZ(1); //x^p-x-1
-    //this->f[1] = to_ZZ(-1);
-    this->f[0] = to_ZZ(1);
+    this->f[1] = to_ZZ(-1);
+    this->f[0] = to_ZZ(-1);
+    
     this->gauss = new Sampling();
 }
 
@@ -105,7 +107,6 @@ void EncryptionScheme::Encode(ZZX& aprime, const int32_t a[]) {
 }
 
 void EncryptionScheme::Decode(int32_t a[], const ZZX& aprime) {
-
     ZZ lbound = to_ZZ((this->Q-1)/4);
     ZZ ubound = to_ZZ(3*lbound);
     
@@ -115,6 +116,5 @@ void EncryptionScheme::Decode(int32_t a[], const ZZX& aprime) {
         else
             a[i] = (int32_t) 0;
     }
-
 }
 

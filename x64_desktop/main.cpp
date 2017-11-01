@@ -1,14 +1,15 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 /* 
  * File:   main.cpp
  * Author: jnortiz
  *
  * Created on October 30, 2017, 1:50 PM
+ * 
+ * Compiling: g++ -lm -lgmp -lntl -I/usr/local/include/NTL main.cpp EncryptionScheme.cpp Sampling.cpp -o main
+ * Executing: LD_LIBRARY_PATH=/usr/local/lib ./main
+ * 
+ * Requirements: GMP and NTL libraries. In the compiling and executing example above, 
+ * it assumes the default destination paths in the installation process.
+ * 
  */
 
 #include <iostream>
@@ -19,10 +20,27 @@
 
 #include "EncryptionScheme.h"
 
-#define P 512
-#define Q 12289
-#define BENCH_LOOPS 1000
-//#define DEBUG 1
+#define BENCH_LOOPS 100
+#define DEBUG 1
+#define RLWE 1
+
+#ifdef RLWE
+/* Regular Ring-LWE */
+#define P 1024
+#define Q 11289
+#endif
+
+#ifdef ALTERNATE
+/* Alternate */
+#define Q 179424673
+#define P 1987
+#endif
+
+#ifdef NTRU
+/* NTRU Prime parameters */
+#define P 761
+#define Q 4591
+#endif
 
 using namespace std;
 using namespace NTL;
@@ -49,6 +67,8 @@ int main(int argc, char** argv) {
 
     ZZX a, c1, c2, moriginal, mprime, r2, p1;
     int32_t m[P], mdecoded[P];    
+    
+    int total_errors = 0;
     
     for(int k = 0; k < BENCH_LOOPS; k++) {        
         
@@ -79,19 +99,36 @@ int main(int argc, char** argv) {
         es->Decode(mdecoded, moriginal);
 
     #ifdef DEBUG
-        cout << "Decrypted message: ";
+        cout << "Decrypted message: {";
         for(int i = 0; i < P-1; i++) {
             cout << mdecoded[i] << ",";
         }
         cout << m[P-1] << "}\n\n";
     #endif
 
+        int counter = 0;
         for(int i = 0; i < P; i++)
-            assert(mdecoded[i] == m[i]);
+            if(! (mdecoded[i] == m[i])) {
+#ifdef DEBUG
+                cout << "Error in the " << i << "-th coordinate. Respective to: " << moriginal[i] << endl;
+#endif
+                counter++;
+            }        
+#ifdef DEBUG
+        cout << "Number of incorrect decoding: " << counter << endl << endl;
+#endif
+        if(counter > 0)
+            total_errors++;
         
     }
     
-    cout << "OK.\n\n";
+    if(total_errors == 0)
+        cout << "OK.\n";
+    else 
+        cout << total_errors << " executions have failed.\n";
+    
+    if(total_errors == BENCH_LOOPS)
+        cout << "\nAll executions have failed.\n\n";
     
     return 0;
     
