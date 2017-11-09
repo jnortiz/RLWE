@@ -20,26 +20,29 @@
 
 #include "EncryptionScheme.h"
 
-#define BENCH_LOOPS 100
-#define DEBUG 1
-#define RLWE 1
+#define BENCH_LOOPS 10
+//#define DEBUG
+#define NTRU
 
 #ifdef RLWE
 /* Regular Ring-LWE */
 #define P 1024
 #define Q 11289
+#define SIGMA 3.19
 #endif
 
 #ifdef ALTERNATE
 /* Alternate */
-#define Q 179424673
-#define P 1987
+#define P 1024
+#define Q 11289
+#define SIGMA 319
 #endif
 
 #ifdef NTRU
 /* NTRU Prime parameters */
 #define P 761
 #define Q 4591
+#define SIGMA 2.0
 #endif
 
 using namespace std;
@@ -63,19 +66,23 @@ int main(int argc, char** argv) {
     cout << "------------------------\nRing-LWE encryption scheme\n------------------------\n" << endl;
     cout << "Running the scheme " << BENCH_LOOPS << " times.\n\n";
     
-    EncryptionScheme *es = new EncryptionScheme(P, Q);
+    long precision = 128;
+    RR center = to_RR(0.0);
+    float tailcut = 13.2;
+    
+    EncryptionScheme *es = new EncryptionScheme(P, Q, precision, tailcut, to_RR(SIGMA), center);
 
     ZZX a, c1, c2, moriginal, mprime, r2, p1;
     int32_t m[P], mdecoded[P];    
     
     int total_errors = 0;
+
+    /* Key generation */
+    RandomPoly(a);            
+    es->KeyGeneration(a, r2, p1);
     
     for(int k = 0; k < BENCH_LOOPS; k++) {        
         
-        /* Key generation */
-        RandomPoly(a);            
-        es->KeyGeneration(a, r2, p1);
-
         RandomMessage(m);
 
     #ifdef DEBUG

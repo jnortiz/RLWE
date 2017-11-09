@@ -27,7 +27,7 @@ using namespace std;
 
 class EncryptionScheme {
 public:
-    EncryptionScheme(const int& p, const int& q);
+    EncryptionScheme(const int& p, const int& q, long precision, float tailcut, RR sigma, RR center);
     EncryptionScheme(const EncryptionScheme& orig);
     virtual ~EncryptionScheme();
     
@@ -37,9 +37,16 @@ public:
     void Encryption(ZZX& c1, ZZX& c2, const ZZX& a, const ZZX& p1, const ZZX& m);
     void Decryption(ZZX& m, const ZZX& c1, const ZZX& c2, const ZZX& r2);
 private:
+    /* Ring parameters */
     int P;
     int Q;
     ZZX f;
+    
+    /* Knuth-Yao discrete Gaussian sampler parameters */
+    float tailcut;
+    RR sigma;
+    RR center;
+    
     Sampling *gauss;
     void PolySampling(ZZX& a);
     void Mod(ZZX& a);

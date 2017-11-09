@@ -13,19 +13,18 @@
 
 #include "Sampling.h"
 
-Sampling::Sampling() {
-    this->rows = 128;
-    this->cols = 40;
-}
+Sampling::Sampling(const int& precision, const float& tailcut, const RR& sigma, const RR& center) {    
+    this->precision = precision;
+    this->tailcut = tailcut;
+    this->sigma = sigma;
+    this->c = center;
+    
+    RR::SetPrecision(to_long(precision));
 
-Sampling::Sampling(const Sampling& orig) {
+    this->BuildProbabilityMatrix();
 }
 
 Sampling::~Sampling() {
-}
-
-uint32_t Sampling::ct_lt_u32(uint32_t x, uint32_t y) {
-    return (x^((x^y)|((x-y)^y))) >> 31;
 }
 
 // bit = 0 then return a
@@ -34,76 +33,159 @@ int32_t Sampling::Select(int32_t a, int32_t b, unsigned bit) {
   return ((mask & (a ^ b)) ^ a);
 }
 
-int32_t Sampling::knuth_yao_ct_fast_32(int tailcut, int sigma, int center) {
+RR Sampling::Probability(RR x, RR sigma, RR c) {
+    RR S = sigma*sqrt(2*ComputePi_RR());
+    RR overS = 1/S;
+    
+    if(x == to_RR(0))
+        return overS;
+    
+    return overS*exp(-(power((x-c)/sigma, 2))/2.0);
+    
+}//end-Probability()
 
-  int32_t signal;
-  int32_t _d, d, S, pNumRows; // may be negative numbers
-  uint32_t bound, col, invalidSample, pNumCols, r, t;
-  unsigned enable, hit;
+/* Knuth-Yao algorithm to obtain a sample from the discrete Gaussian */
+int Sampling::KnuthYao() {
 
-  bound = tailcut * sigma;
-  signal = 1 - 2 * (rand() & 1);
-  invalidSample = bound + 1;
-  pNumRows = ROWS;
-  pNumCols = COLS;
+    int bound, center, col, d, invalidSample, pNumRows, pNumCols, S, signal;
+    unsigned enable, hit;
+    unsigned long r;
+    
+    bound = ((int)tailcut)*to_int(sigma);
+    center = to_int(c);
+    d = 0; //Distance
+    hit = 0;
+    signal = 1 - 2*RandomBits_long(1); // Sample a random signal s    
+    invalidSample = bound+1;
+    pNumRows = this->P.length(); // Precision
+    pNumCols = this->P[0].length();    
+    
+    Vec<int> randomBits;
+    randomBits.SetLength(pNumRows);
+    
+    int i, index, j, length;
+    length = sizeof(unsigned long)*8; // 64 bits 
+    
+    index = 0;
+    for(i = 0; i < (pNumRows/length+1); i++) {
+        r = RandomWord(); // It returns a word filled with pseudo-random bits
+        for(j = 0; j < length && index < pNumRows; j++, r >>= 1)
+            randomBits[index++] = (r & 1); // Getting the least significant bit
+    }//end-for
+    
+    S = 0;
+    
+    for(int row = 0; row < pNumRows; row++) {
+        
+        d = 2*d + randomBits[row]; // Distance calculus
+        
+        for(col = this->begin[row]; col < pNumCols; col++) {
+            
+            d = d - this->P[row][col];
+            
+            enable = (unsigned)(d + 1); // "enable" turns 0 iff d = -1
+            enable = (1 ^ ((enable | -enable) >> 31)) & 1; // "enable" turns 1 iff "enable" was 0
+             
+            /* When enable&!hit becomes 1, "col" is added to "S";
+             * e.g. enable = 1 and hit = 0 */
+            S += Select(invalidSample, col, (enable & !hit));
+            hit += (enable & !hit);
+                            
+        }//end-for
+        
+    }//end-for
+    
+    /* Note: the "col" value is in [0, bound]. So, the invalid sample must be 
+     * greater than bound. */
+    S %= invalidSample;
+    S = S - bound + center;
+    S *= signal;
+        
+    return S;
+    
+}//end-Knuth-Yao()
 
-  uint32_t k; // < 255
-  int32_t index, row;
+/* This method build the probability matrix for samples in the range 
+ * [-tailcut*\floor(sigma), +tailcut*\floor(sigma)] */
+void Sampling::BuildProbabilityMatrix() {
+    
+    RR::SetPrecision(to_long(precision));
 
-  index = 0;
-  while(index < pNumRows) {
-    r = rand();
-    for (k = 0; k < 32; k++, r >>= 1)
-      this->randomBits[index++] = (int8_t)(r & 0x1);
- }//end-while
+    Vec< Vec<int> > auxP;
+    Vec<int> auxBegin;
+    
+    // The random variable consists of elements in [c-tailcut*sigma, c+tailcut*sigma]
+    int i, j, bound, pNumCols, pNumRows, x;
+    vec_RR probOfX;
+    RR pow;
+    
+    bound = ((int)tailcut)*to_int(sigma);
+    
+    probOfX.SetLength(bound+1);
+       
+    auxP.SetLength(precision);
+    for(i = 0; i < auxP.length(); i++)
+        auxP[i].SetLength(bound+1);
 
-  int8_t aux_hw;
+    for(x = bound; x > 0; x--)
+        probOfX[bound-x] = Probability(to_RR(x) + c, sigma, c);
+    div(probOfX[bound], Probability(to_RR(0) + c, sigma, c), to_RR(2));
+    
+    i = -1;
+    for(j = 0; j < precision; j++) {
+        pow = power2_RR(i--); // 2^{i}
+        for(x = bound; x >= 0; x--) {
+            auxP[j][bound-x] = 0;                
+            if(probOfX[bound-x] >= pow) {
+                auxP[j][bound-x] = 1;
+                probOfX[bound-x] -= pow;
+            }//end-if
+        }//end-for
+    }//end-while
+    
+    this->P = auxP;
+    
+    // Uncomment this line if you want to preview the probability matrix P
+//    this->PrintMatrix("Probability matrix", this->P);
+    
+    pNumCols = this->P[0].length();
+    pNumRows = this->P.length();
+    
+    auxBegin.SetLength(pNumRows);
+    
+    // Computing in which position the non-zero values in P start and end 
+    for(i = 0; i < pNumRows; i++) {
+        
+        auxBegin[i] = pNumCols-1;
+        
+        for(j = 0; j < pNumCols; j++)
+            if(this->P[i][j] == 1) {
+                auxBegin[i] = j;
+                break;
+            }//end-if
+        
+    }//end-for
+    
+    this->begin = auxBegin;
+                
+}//end-BuildProbabilityMatrix()
 
-  S = 0; t = 0; d = 0; hit = 0; _d = 0;
-  for (row = 1; row < pNumRows; row++) {
-    aux_hw = this->_hw[row];
-    _d = 2 * _d + this->randomBits[row];	// Distance calculus
-    enable = ct_lt_u32(_d, aux_hw); // _d < _hw[row]?
-    _d = Select(_d - aux_hw, _d, enable & !hit);
-    d = Select(d, _d, enable & !hit);
-    t = Select(t, row, enable & !hit); // t \in {0, 127 = ROWS}
-    hit += (enable & !hit);
-  }
-
-  uint32_t aux_p32 = this->_p32_t[t];
-
-  hit = 0;
-  for (col = 0; col <= 31; col++) {
-    d = d - ((aux_p32 >> (uint32_t)(32 - col - 1)) & 1);
-
-    enable = (unsigned)(d + 1); // "enable" turns 0 iff d = -1
-    enable = (1 ^ ((enable | -enable) >> 31)) & 1; // "enable" turns 1 iff "enable" was 0
-
-    S += Select(invalidSample, col, (enable & !hit));
-    hit += (enable & !hit);
-
-  }
-
-  uint8_t aux_p8 = this->_p8_t[t];
-
-  for (col = 32; col < pNumCols; col++) {
-    d = d - ((aux_p8 >> (uint8_t)(pNumCols - col - 1)) & 1);
-
-    enable = (unsigned)(d + 1); // "enable" turns 0 iff d = -1
-    enable = (1 ^ ((enable | -enable) >> 31)) & 1; // "enable" turns 1 iff "enable" was 0
-
-    S += Select(invalidSample, col, (enable & !hit));
-    hit += (enable & !hit);
-
-  }
-
-  /* Note: the "col" value is in [0, bound]. So, the invalid sample must be
-    * greater than bound. */
-  S %= invalidSample;
-  S = S - bound + center;
-  S *= signal;
-
-  return S;
-
-}
-
+/* Method for computing the binary expansion of a given probability in [0, 1] */
+void Sampling::BinaryExpansion(Vec< Vec<int> >& auxP, RR probability, int precision, int index) {
+    
+    RR pow;
+    int i, j;
+    i = -1;
+    j = 0;
+    
+    while(probability > 0 && j < precision) {
+        pow = power2_RR(i--); // 2^{i}
+        if(pow <= probability) {
+            auxP[j][index] = 1;
+            probability -= pow;
+        } else
+            auxP[j][index] = 0;
+        j++;
+    }//end-while
+            
+}//end-BinaryExpansion()

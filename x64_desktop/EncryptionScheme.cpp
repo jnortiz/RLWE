@@ -13,7 +13,7 @@
 
 #include "EncryptionScheme.h"
 
-EncryptionScheme::EncryptionScheme(const int& p, const int& q) {
+EncryptionScheme::EncryptionScheme(const int& p, const int& q, long precision, float tailcut, RR sigma, RR center) {
     this->P = p;
     this->Q = q;
     this->f.SetLength(this->P+1);
@@ -22,7 +22,11 @@ EncryptionScheme::EncryptionScheme(const int& p, const int& q) {
     this->f[1] = to_ZZ(-1);
     this->f[0] = to_ZZ(-1);
     
-    this->gauss = new Sampling();
+    this->tailcut = tailcut;
+    this->sigma = sigma;
+    this->center = center;
+    
+    this->gauss = new Sampling(precision, tailcut, sigma, center);
 }
 
 EncryptionScheme::EncryptionScheme(const EncryptionScheme& orig) {
@@ -42,9 +46,18 @@ inline ZZ EncryptionScheme::mod(ZZ i, ZZ n) {
 }
 
 void EncryptionScheme::PolySampling(ZZX& a) {
+    int bound, sample;
+    
+    bound = ((int)tailcut)*to_int(sigma);
+    center = to_int(center);
+
     a.SetLength(this->P);
-    for(int i = 0; i < this->P; i++)
-        a[i] = to_ZZ(this->gauss->knuth_yao_ct_fast_32(13, 3.1915, 0));
+    for(int i = 0; i < this->P; i++) {
+        do{
+            sample = this->gauss->KnuthYao();
+        } while(sample >= (center + bound) || sample <= (center - bound));                
+        a[i] = to_ZZ(sample);
+    }    
 }
 
 void EncryptionScheme::KeyGeneration(const ZZX& a, ZZX& r2, ZZX& p1) {
