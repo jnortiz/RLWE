@@ -37,6 +37,9 @@ public:
     void Encryption(ZZX& c1, ZZX& c2, const ZZX& a, const ZZX& p1, const ZZX& m);
     void Decryption(ZZX& m, const ZZX& c1, const ZZX& c2, const ZZX& r2);
 private:
+    
+    void SetF();
+    
     /* Ring parameters */
     int P;
     int Q;
@@ -51,6 +54,7 @@ private:
     void PolySampling(ZZX& a);
     void Mod(ZZX& a);
     inline ZZ mod(ZZ i, ZZ n);
+    
 };
 
 #endif /* ENCRYPTIONSCHEME_H */

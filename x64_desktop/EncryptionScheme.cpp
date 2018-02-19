@@ -12,16 +12,117 @@
  */
 
 #include "EncryptionScheme.h"
+#include <vector>
+#include <sstream>
+
+//#define NTRU
+#define ALTERNATE
+
+void EncryptionScheme::SetF() {
+    
+    this->f.SetLength(this->P+1);
+
+    string after, before, term, get_coeff, get_expo;
+    int pos, expo;
+    ZZ coeff;
+
+    term = "not empty";
+    pos = 1;
+
+    while(1) {
+
+      cin >> term;
+
+      if(term == "/")
+        break;
+
+      if(term == "+" || term == "-") {
+          if(term == "+") {
+            pos = 1;
+          } else {
+            pos = 0;
+          }
+      } else {
+
+        //cout << "\nTerm: " << term << ". [";
+
+        stringstream ss(term);
+
+        getline(ss, before, 'x');
+        getline(ss, after, 'x');
+
+        //cout << before << "], [" << after << "]\n";
+
+        if(before.empty()) {
+
+          if(!pos) {
+            coeff = -1;
+          } else coeff = 1;
+
+        } else {            
+          stringstream ff(before);
+          getline(ff, get_coeff, '*');
+          //cout << "Before *: " << get_coeff << ". ";
+          stringstream cf(get_coeff);
+          cf >> coeff;
+          if(!pos)
+              coeff *= -1;
+          getline(ff, get_coeff, '*');
+          //cout << "Before *: " << get_coeff << ". ";
+        }
+
+        if(after.empty()) {
+            if(before.empty()) { // term x has no coefficient
+                expo = 1;
+                coeff = 1;
+                if(!pos) coeff *= -1;
+            } 
+            expo = 0;
+            if(get_coeff.empty()) expo = 1;
+        } else {
+          stringstream xp(after);
+          getline(xp, get_expo, '^');
+          getline(xp, get_expo, '^');
+          stringstream xx(get_expo);
+          xx >> expo;
+          //cout << "Exponent: " << expo << endl;
+        }
+
+        //poly.push_back(coeff);
+        //cout << "Expo: " << expo << ", Coeff: " << coeff << endl;
+        this->f[expo] = to_ZZ(coeff);
+
+      }
+    }  
+}
 
 EncryptionScheme::EncryptionScheme(const int& p, const int& q, long precision, float tailcut, RR sigma, RR center) {
+    
+    RR::SetPrecision(to_long(precision));
     this->P = p;
     this->Q = q;
+
+#ifdef ALTERNATE    
+    SetF();
+#endif
+    
+#ifdef NTRU
     this->f.SetLength(this->P+1);
     
-    this->f[this->P] = to_ZZ(1); //x^p-x-1
-    this->f[1] = to_ZZ(-1);
-    this->f[0] = to_ZZ(-1);
+    this->f[this->P] = 1;
+    this->f[1] = -1;
+    this->f[0] = -1;
+#endif
     
+    /*
+    this->f[6] = to_ZZ(1);
+    this->f[5] = to_ZZ(1);
+    this->f[4] = to_ZZ(-5);
+    this->f[3] = to_ZZ(-4);
+    this->f[2] = to_ZZ(6);
+    this->f[1] = to_ZZ(3);
+    this->f[0] = to_ZZ(1);*/    
+        
     this->tailcut = tailcut;
     this->sigma = sigma;
     this->center = center;

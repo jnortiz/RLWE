@@ -20,9 +20,9 @@
 
 #include "EncryptionScheme.h"
 
-#define BENCH_LOOPS 10
+#define BENCH_LOOPS 1000
 //#define DEBUG
-#define NTRU
+#define ALTERNATE
 
 #ifdef RLWE
 /* Regular Ring-LWE */
@@ -33,9 +33,9 @@
 
 #ifdef ALTERNATE
 /* Alternate */
-#define P 1024
-#define Q 11289
-#define SIGMA 319
+#define P 14 // Polynomial degree
+#define Q 179424673 /*179424673*/ /*15485863*/ /*8380417*/
+#define SIGMA 2.0
 #endif
 
 #ifdef NTRU
@@ -51,7 +51,7 @@ using namespace NTL;
 void RandomPoly(ZZX& a) {
     a.SetLength(P);
     for(int i = 0; i < P; i++)
-        a[i] = NTL::RandomBits_ulong(log(Q));
+        a[i] = NTL::RandomBits_ulong(log(Q)/4);
 }
 
 void RandomMessage(int32_t m[]) {
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     cout << "------------------------\nRing-LWE encryption scheme\n------------------------\n" << endl;
     cout << "Running the scheme " << BENCH_LOOPS << " times.\n\n";
     
-    long precision = 128;
+    long precision = 256;
     RR center = to_RR(0.0);
     float tailcut = 13.2;
     
@@ -103,8 +103,9 @@ int main(int argc, char** argv) {
 
         /* Decryption */
         es->Decryption(moriginal, c1, c2, r2);
+        
         es->Decode(mdecoded, moriginal);
-
+        
     #ifdef DEBUG
         cout << "Decrypted message: {";
         for(int i = 0; i < P-1; i++) {
